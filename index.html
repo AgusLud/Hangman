@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ahorcado</title>
+<style>
+body {
+  font-family: "Poppins", sans-serif;
+  background: linear-gradient(135deg, #74b9ff, #a29bfe);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 100vh;
+  margin: 0;
+  color: #2d3436;
+  padding-top: 20px;
+}
+
+h1 {
+  background-color: #ffeaa7;
+  color: #2d3436;
+  padding: 20px 50px;
+  border-radius: 25px;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+  font-size: 3em;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 30px;
+}
+
+#juego {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 50px;
+}
+
+#panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#palabra {
+  font-size: 2em;
+  letter-spacing: 8px;
+  margin: 20px 0;
+}
+
+#letras {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  max-width: 400px;
+  gap: 5px;
+}
+
+.letra {
+  padding: 12px 18px;
+  border: none;
+  background-color: #fab1a0;
+  color: white;
+  border-radius: 10px;
+  font-size: 1.2em;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.letra:hover {
+  background-color: #ff7675;
+}
+
+.letra:disabled {
+  background-color: #dfe6e9;
+  cursor: not-allowed;
+}
+
+.btn {
+  margin-top: 20px;
+  padding: 15px 40px;
+  background-color: #55efc4;
+  color: #2d3436;
+  border: none;
+  border-radius: 15px;
+  font-size: 1.5em;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.btn:hover {
+  background-color: #00cec9;
+  color: white;
+}
+
+#mensaje {
+  font-size: 1.5em;
+  margin-top: 20px;
+  font-weight: bold;
+  text-align: center;
+}
+
+#intentos {
+  font-size: 1.2em;
+  margin-top: 10px;
+}
+
+canvas {
+  background-color: #ffeaa7;
+  border-radius: 15px;
+}
+</style>
+</head>
+<body>
+<h1>🎯 Ahorcado 🎯</h1>
+
+<div id="juego">
+  <div id="panel">
+    <div id="palabra"></div>
+    <div id="letras"></div>
+    <div id="intentos"></div>
+    <div id="mensaje"></div>
+    <button class="btn" id="btnComenzar">Comenzar a Jugar</button>
+    <button class="btn" id="btnReiniciar" style="display:none;">Volver a Jugar</button>
+  </div>
+  <canvas id="canvas" width="200" height="250" style="display:none;"></canvas>
+</div>
+
+<script>
+const palabras = ["perro","gato","casa","sol","escuela","amigo","juego","flor","camino","pelota","lampara","ventana","silla","mesa","nube"];
+const letrasContainer = document.getElementById("letras");
+const palabraDiv = document.getElementById("palabra");
+const mensajeDiv = document.getElementById("mensaje");
+const intentosDiv = document.getElementById("intentos");
+const btnComenzar = document.getElementById("btnComenzar");
+const btnReiniciar = document.getElementById("btnReiniciar");
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let palabraActual = "";
+let palabraMostrada = [];
+let intentos = 6;
+
+// Crear botones de letras
+const crearBotonesLetras = () => {
+  letrasContainer.innerHTML = "";
+  for (let i = 65; i <= 90; i++) {
+    const letra = String.fromCharCode(i);
+    const btn = document.createElement("button");
+    btn.textContent = letra;
+    btn.classList.add("letra");
+    btn.addEventListener("click", () => manejarLetra(letra, btn));
+    letrasContainer.appendChild(btn);
+  }
+};
+
+// Comenzar juego
+const comenzarJuego = () => {
+  palabraActual = palabras[Math.floor(Math.random() * palabras.length)].toUpperCase();
+  palabraMostrada = Array(palabraActual.length).fill("_");
+  intentos = 6;
+  actualizarPantalla();
+  crearBotonesLetras();
+  mensajeDiv.textContent = "";
+  btnComenzar.style.display = "none";
+  btnReiniciar.style.display = "none";
+  canvas.style.display = "block";
+  dibujarBase();
+};
+
+// Manejar letra seleccionada
+const manejarLetra = (letra, boton) => {
+  boton.disabled = true;
+  let acierto = false;
+
+  for (let i = 0; i < palabraActual.length; i++) {
+    if (palabraActual[i] === letra) {
+      palabraMostrada[i] = letra;
+      acierto = true;
+    }
+  }
+
+  if (!acierto) intentos--;
+
+  actualizarPantalla();
+  dibujarMuñeco();
+
+  if (!palabraMostrada.includes("_")) {
+    mensajeDiv.textContent = "🎉 ¡Bien hecho! Ganaste 🎉";
+    finalizarJuego();
+  } else if (intentos === 0) {
+    mensajeDiv.textContent = `😢 Intentalo de nuevo. La palabra era: ${palabraActual}`;
+    finalizarJuego();
+  }
+};
+
+// Actualizar pantalla
+const actualizarPantalla = () => {
+  palabraDiv.textContent = palabraMostrada.join(" ");
+  intentosDiv.textContent = `Intentos restantes: ${intentos}`;
+};
+
+// Finalizar juego
+const finalizarJuego = () => {
+  const botones = document.querySelectorAll(".letra");
+  botones.forEach(btn => btn.disabled = true);
+  btnReiniciar.style.display = "inline-block";
+};
+
+// Dibujar base del ahorcado
+const dibujarBase = () => {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  ctx.strokeStyle = "#2d3436";
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(20, 230); // Base
+  ctx.lineTo(180, 230);
+  ctx.moveTo(50, 230); // Poste
+  ctx.lineTo(50, 20);
+  ctx.lineTo(130, 20);
+  ctx.lineTo(130, 40);
+  ctx.stroke();
+};
+
+// Dibujar muñeco según los intentos
+const dibujarMuñeco = () => {
+  const errores = 6 - intentos;
+  ctx.strokeStyle = "#2d3436";
+  ctx.lineWidth = 4;
+
+  if (errores >= 1) { ctx.beginPath(); ctx.arc(130, 60, 20, 0, Math.PI * 2); ctx.stroke(); } // Cabeza
+  if (errores >= 2) { ctx.beginPath(); ctx.moveTo(130, 80); ctx.lineTo(130, 150); ctx.stroke(); } // Cuerpo
+  if (errores >= 3) { ctx.beginPath(); ctx.moveTo(130, 90); ctx.lineTo(100, 120); ctx.stroke(); } // Brazo izq
+  if (errores >= 4) { ctx.beginPath(); ctx.moveTo(130, 90); ctx.lineTo(160, 120); ctx.stroke(); } // Brazo der
+  if (errores >= 5) { ctx.beginPath(); ctx.moveTo(130, 150); ctx.lineTo(100, 190); ctx.stroke(); } // Pierna izq
+  if (errores >= 6) { ctx.beginPath(); ctx.moveTo(130, 150); ctx.lineTo(160, 190); ctx.stroke(); } // Pierna der
+};
+
+btnComenzar.addEventListener("click", comenzarJuego);
+btnReiniciar.addEventListener("click", comenzarJuego);
+</script>
+</body>
+</html>
